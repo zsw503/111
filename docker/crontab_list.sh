@@ -4,10 +4,5 @@
 #30 * * * * sh +x /scripts/docker/auto_help.sh collect >> /scripts/logs/auto_help_collect.log 2>&1
 
 ##############活动##############
-#财富岛
-0 10,20 * * * node /scripts/jd_cfd.js >> /scripts/logs/jd_cfd.log 2>&1
-#财富岛提现
-59 11,23 * * * node /scripts/jd_cfd_withdraw.js >> /scripts/logs/jd_cfd_withdraw.log 2>&1
-10 12 * * * node /scripts/jd_cfd_withdraw.js >> /scripts/logs/jd_cfd_withdraw.log 2>&1
 #极速版任务
 10 2,8,16 * * * node /scripts/jd_speed_sign.js >> /scripts/logs/jd_speed_sign.log 2>&1
