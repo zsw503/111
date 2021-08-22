@@ -6,3 +6,5 @@
 ##############活动##############
 #极速版任务
 10 2,8,16 * * * node /scripts/jd_speed_sign.js >> /scripts/logs/jd_speed_sign.log 2>&1
+#资产综合推送
+0 12 * * * node /scripts/jd_bean_change.js >> /scripts/logs/jd_bean_change.log 2>&1
