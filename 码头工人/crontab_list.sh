@@ -1,0 +1,17 @@
+# 每1天的23:50分清理一次日志(互助码不清理，proc_file.sh对该文件进行了去重)
+50 23 */1 * * find /scripts/logs -name '*.log' | grep -v 'sharecodeCollection' | xargs rm -rf
+#收集助力码
+#30 * * * * sh +x /scripts/docker/auto_help.sh collect >> /scripts/logs/auto_help_collect.log 2>&1
+
+##############活动##############
+#极速版任务
+10 2,6,16 * * * node /scripts/jd_speed_sign.js >> /scripts/logs/jd_speed_sign.log 2>&1
+#京东农场
+0 8 * * * node /scripts/jd_fruit.js >> /scripts/logs/jd_fruit.log 2>&1
+#京喜工厂
+20 8 * * * node /scripts/jd_dreamFactory.js >> /scripts/logs/jd_dreamFactory.log 2>&1
+#京东萌宠
+40 8 * * * node /scripts/jd_pet.js >> /scripts/logs/jd_pet.log 2>&1
+#资产综合推送
+0 9 * * * node /scripts/jd_bean_change.js >> /scripts/logs/jd_bean_change.log 2>&1
+
