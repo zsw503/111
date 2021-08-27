@@ -1,5 +1,5 @@
 /*
-cron "0 0,12 * * *" jd_bean_change.js
+cron "30 10,22 * * *" jd_bean_change.js, tag:资产变化强化版by-ccwav
 */
 
 //更新by ccwav,20210821
@@ -68,6 +68,7 @@ if ($.isNode()) {
             await getMs();
             await jdfruitRequest('taskInitForFarm', {"version":14,"channel":1,"babelChannel":"120"});
             await getjdfruit();
+            await cash();
             await requestAlgo();
             await JxmcGetRequest();
             await bean();
@@ -95,50 +96,50 @@ async function showMsg() {
     //   await notify.sendNotify(`${$.name} - 账号${$.index} - ${$.nickName}`, `账号${$.index}：${$.nickName || $.UserName}\n昨日收入：${$.incomeBean}京豆 🐶\n昨日支出：${$.expenseBean}京豆 🐶\n当前京豆：${$.beanCount}京豆 🐶${$.message}`, { url: `https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean` })
     // }
 
-    ReturnMessage=`📣=============账号${$.index}=============📣\n`
-    ReturnMessage+=`账号名称：${$.nickName || $.UserName}\n`;
-    ReturnMessage+=`今日收入：${$.todayIncomeBean}京豆 🐶\n`;
-    ReturnMessage+=`昨日收入：${$.incomeBean}京豆 🐶\n`;
-    ReturnMessage+=`昨日支出：${$.expenseBean}京豆 🐶\n`;
-    ReturnMessage+=`当前京豆：${$.beanCount}(今日将过期${$.expirejingdou})京豆🐶\n`;
+    ReturnMessage=`📣=======账号${$.index}=======📣\n`
+    ReturnMessage+=`账号名称:${$.nickName || $.UserName}\n`;
+    ReturnMessage+=`今日收入:${$.todayIncomeBean}京豆 🐶\n`;
+    ReturnMessage+=`昨日收入:${$.incomeBean}京豆 🐶\n`;
+    ReturnMessage+=`昨日支出:${$.expenseBean}京豆 🐶\n`;
+    ReturnMessage+=`当前京豆:${$.beanCount}京豆(今日过期${$.expirejingdou})\n`;
 
     if(typeof $.JDEggcnt !== "undefined"){
-        ReturnMessage+=`京喜牧场：${$.JDEggcnt}枚鸡蛋\n`;
+        ReturnMessage+=`京喜牧场:${$.JDEggcnt}枚鸡蛋\n`;
     }
     if(typeof $.JDtotalcash !== "undefined"){
-        ReturnMessage+=`极速金币：${$.JDtotalcash}金币(≈${$.JDtotalcash / 10000}元)\n`;
+        ReturnMessage+=`极速金币:${$.JDtotalcash}金币(≈${$.JDtotalcash / 10000}元)\n`;
     }
     if(typeof $.JdzzNum !== "undefined"){
-        ReturnMessage+=`京东赚赚：${$.JdzzNum}金币(≈${$.JdzzNum / 10000}元)\n`;
+        ReturnMessage+=`京东赚赚:${$.JdzzNum}金币(≈${$.JdzzNum / 10000}元)\n`;
     }
     if($.JdMsScore!=0){
-        ReturnMessage+=`京东秒杀：${$.JdMsScore}秒秒币(≈${$.JdMsScore / 1000}元)\n`;
+        ReturnMessage+=`京东秒杀:${$.JdMsScore}秒秒币(≈${$.JdMsScore / 1000}元)\n`;
     }
     if($.JdFarmProdName != ""){
         if($.JdtreeEnergy!=0){
-            ReturnMessage+=`东东农场：${$.JdFarmProdName},进度${(($.JdtreeEnergy / $.JdtreeTotalEnergy) * 100).toFixed(2)}%`;
+            ReturnMessage+=`东东农场:${$.JdFarmProdName},进度${(($.JdtreeEnergy / $.JdtreeTotalEnergy) * 100).toFixed(2)}%`;
             if($.JdwaterD!='Infinity' && $.JdwaterD!='-Infinity'){
                 ReturnMessage+=`,${$.JdwaterD === 1 ? '明天' : $.JdwaterD === 2 ? '后天' : $.JdwaterD + '天后'}可兑🍉\n`;
             } else {
                 ReturnMessage+=`\n`;
             }
         } else {
-            ReturnMessage+=`东东农场：${$.JdFarmProdName}\n`;
+            ReturnMessage+=`东东农场:${$.JdFarmProdName}\n`;
         }
     }
     if ($.jxFactoryInfo) {
-        ReturnMessage += `京喜工厂：${$.jxFactoryInfo}🏭\n`
+        ReturnMessage += `京喜工厂:${$.jxFactoryInfo}🏭\n`
     }
-    if ($.ddFactoryInfo) {
-        ReturnMessage += `东东工厂：${$.ddFactoryInfo}🏭\n`
-    }
+    /*if ($.ddFactoryInfo) {
+        ReturnMessage += `东东工厂:${$.ddFactoryInfo}🏭\n`
+    }*/
 
     const response = await await PetRequest('energyCollect');
     const initPetTownRes = await PetRequest('initPetTown');
     if (initPetTownRes.code === '0' && initPetTownRes.resultCode === '0' && initPetTownRes.message === 'success') {
         $.petInfo = initPetTownRes.result;
         if (response.resultCode === '0') {
-            ReturnMessage += `东东萌宠：${$.petInfo.goodsInfo.goodsName},`;
+            ReturnMessage += `东东萌宠:${$.petInfo.goodsInfo.goodsName},`;
             ReturnMessage += `勋章${response.result.medalNum}/${response.result.medalNum+response.result.needCollectMedalNum}块(${response.result.medalPercent}%)\n`;
             //ReturnMessage += `          已有${response.result.medalNum}块勋章，还需${response.result.needCollectMedalNum}块\n`;
 
@@ -392,7 +393,7 @@ function redPacket() {
                         $.jdhRed = $.jdhRed.toFixed(2)
                         $.balance = data.balance
                         $.expiredBalance = ($.jxRedExpire + $.jsRedExpire + $.jdRedExpire).toFixed(2)
-                        $.message += `\n当前总红包：${$.balance}(今日总过期${$.expiredBalance})元 🧧\n京喜红包：${$.jxRed}(今日将过期${$.jxRedExpire.toFixed(2)})元 🧧\n极速红包：${$.jsRed}(今日将过期${$.jsRedExpire.toFixed(2)})元 🧧\n京东红包：${$.jdRed}(今日将过期${$.jdRedExpire.toFixed(2)})元 🧧\n健康红包：${$.jdhRed}(今日将过期${$.jdhRedExpire.toFixed(2)})元 🧧`;
+                        $.message += `\n当前红包:${$.balance}(今日过期${$.expiredBalance})元 \n京喜红包:${$.jxRed}(今日过期${$.jxRedExpire.toFixed(2)})元 \n极速红包:${$.jsRed}(今日过期${$.jsRedExpire.toFixed(2)})元 \n京东红包:${$.jdRed}(今日过期${$.jdRedExpire.toFixed(2)})元 \n健康红包:${$.jdhRed}(今日过期${$.jdhRedExpire.toFixed(2)})元 `;
                     } else {
                         console.log(`京东服务器返回空数据`)
                     }
@@ -626,7 +627,72 @@ function safeGet(data) {
     }
 }
 
+function cash() {
+    return new Promise(resolve => {
+        $.get(taskcashUrl('MyAssetsService.execute',
+            {"method": "userCashRecord", "data": {"channel": 1, "pageNum": 1, "pageSize": 20}}),
+            async (err, resp, data) => {
+                try {
+                    if (err) {
+                        console.log(`${JSON.stringify(err)}`)
+                        console.log(`${$.name} API请求失败，请检查网路重试`)
+                    } else {
+                        if (safeGet(data)) {
+                            data = JSON.parse(data);
+                            $.JDtotalcash = data.data.goldBalance ;
+                        }
+                    }
+                } catch (e) {
+                    $.logErr(e, resp)
+                } finally {
+                    resolve(data);
+                }
+            })
+    })
+}
 
+var __Oxb24bc = ["lite-android&", "stringify", "&android&3.1.0&", "&", "&846c4c32dae910ef", "12aea658f76e453faf803d15c40a72e0", "isNode", "crypto-js", "", "api?functionId=", "&body=", "&appid=lite-android&client=android&uuid=846c4c32dae910ef&clientVersion=3.1.0&t=", "&sign=", "api.m.jd.com", "*/*", "RN", "JDMobileLite/3.1.0 (iPad; iOS 14.4; Scale/2.00)", "zh-Hans-CN;q=1, ja-CN;q=0.9", "undefined", "log", "", "", "", "", "jsjia", "mi.com"];
+
+function taskcashUrl(_0x7683x2, _0x7683x3 = {}) {
+    let _0x7683x4 = +new Date();
+    let _0x7683x5 = `${__Oxb24bc[0x0]}${JSON[__Oxb24bc[0x1]](_0x7683x3)}${__Oxb24bc[0x2]}${_0x7683x2}${__Oxb24bc[0x3]}${_0x7683x4}${__Oxb24bc[0x4]}`;
+    let _0x7683x6 = __Oxb24bc[0x5];
+    const _0x7683x7 = $[__Oxb24bc[0x6]]() ? require(__Oxb24bc[0x7]) : CryptoJS;
+    let _0x7683x8 = _0x7683x7.HmacSHA256(_0x7683x5, _0x7683x6).toString();
+    return {
+        url: `${__Oxb24bc[0x8]}${JD_API_HOST}${__Oxb24bc[0x9]}${_0x7683x2}${__Oxb24bc[0xa]}${escape(JSON[__Oxb24bc[0x1]](_0x7683x3))}${__Oxb24bc[0xb]}${_0x7683x4}${__Oxb24bc[0xc]}${_0x7683x8}${__Oxb24bc[0x8]}`,
+        headers: {
+            'Host': __Oxb24bc[0xd],
+            'accept': __Oxb24bc[0xe],
+            'kernelplatform': __Oxb24bc[0xf],
+            'user-agent': __Oxb24bc[0x10],
+            'accept-language': __Oxb24bc[0x11],
+            'Cookie': cookie
+        }
+    }
+}(function(_0x7683x9, _0x7683xa, _0x7683xb, _0x7683xc, _0x7683xd, _0x7683xe) {
+    _0x7683xe = __Oxb24bc[0x12];
+    _0x7683xc = function(_0x7683xf) {
+        if (typeof alert !== _0x7683xe) {
+            alert(_0x7683xf)
+        };
+        if (typeof console !== _0x7683xe) {
+            console[__Oxb24bc[0x13]](_0x7683xf)
+        }
+    };
+    _0x7683xb = function(_0x7683x7, _0x7683x9) {
+        return _0x7683x7 + _0x7683x9
+    };
+    _0x7683xd = _0x7683xb(__Oxb24bc[0x14], _0x7683xb(_0x7683xb(__Oxb24bc[0x15], __Oxb24bc[0x16]), __Oxb24bc[0x17]));
+    try {
+        _0x7683x9 = __encode;
+        if (!(typeof _0x7683x9 !== _0x7683xe && _0x7683x9 === _0x7683xb(__Oxb24bc[0x18], __Oxb24bc[0x19]))) {
+            _0x7683xc(_0x7683xd)
+        }
+    } catch (e) {
+        _0x7683xc(_0x7683xd)
+    }
+})({})
 
 async function JxmcGetRequest() {
     let url = ``;
