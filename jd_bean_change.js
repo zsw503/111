@@ -1,9 +1,11 @@
-/*
-cron "30 10,22 * * *" jd_bean_change.js, tag:资产变化强化版by-ccwav
-*/
-
-//更新by ccwav,20210821
-const $ = new Env('京东资产变动通知');
+/**
+ * cron "30 10,22 * * *" jd_bean_change.js, tag:资产变化强化版
+ * 原版链接 https://raw.githubusercontent.com/shufflewzc/faker2/main/jd_bean_change_new.js
+ * 支持环境变量控制每次发送的账号个数，默认为2
+ * 环境变量为：JD_BEAN_CHANGE_SENDNUM | export JD_BEAN_CHANGE_SENDNUM=2
+ *
+ */
+const $ = new Env('京东日资产变动通知');
 const notify = $.isNode() ? require('./sendNotify') : '';
 const JXUserAgent =  $.isNode() ? (process.env.JX_USER_AGENT ? process.env.JX_USER_AGENT : ``):``;
 //Node.js用户请在jdCookie.js处填写京东ck;
@@ -13,6 +15,8 @@ let ReturnMessage = '';
 //IOS等用户直接用NobyDa的jd cookie
 let cookiesArr = [], cookie = '';
 const JD_API_HOST = 'https://api.m.jd.com/client.action';
+$.sendNum = process.env.JD_BEAN_CHANGE_SENDNUM * 1 || 2;
+$.sentNum = 0;
 
 if ($.isNode()) {
     Object.keys(jdCookieNode).forEach((item) => {
@@ -27,6 +31,9 @@ if ($.isNode()) {
         $.msg($.name, '【提示】请先获取京东账号一cookie\n直接使用NobyDa的京东签到获取', 'https://bean.m.jd.com/bean/signIndex.action', {"open-url": "https://bean.m.jd.com/bean/signIndex.action"});
         return;
     }
+    console.log('=====环境变量配置如下=====')
+    console.log(`sendNum: ${typeof $.sendNum}, ${$.sendNum}`)
+    console.log('=======================')
     for (let i = 0; i < cookiesArr.length; i++) {
         if (cookiesArr[i]) {
             cookie = cookiesArr[i];
@@ -54,6 +61,7 @@ if ($.isNode()) {
             $.JDtotalcash=0;
             $.JDEggcnt=0;
             $.Jxmctoken='';
+            $.TotalMoney = 0;
             await TotalBean();
             console.log(`\n********开始【京东账号${$.index}】${$.nickName || $.UserName}******\n`);
             if (!$.isLogin) {
@@ -69,17 +77,29 @@ if ($.isNode()) {
             await jdfruitRequest('taskInitForFarm', {"version":14,"channel":1,"babelChannel":"120"});
             await getjdfruit();
             await cash();
+            await TotalMoney();//领现金
             await requestAlgo();
             await JxmcGetRequest();
             await bean();
             await getJxFactory();   //惊喜工厂
-            await getDdFactoryInfo(); // 京东工厂
+            //await getDdFactoryInfo(); // 东东工厂
             await showMsg();
         }
-    }
-
-    if ($.isNode() && allMessage) {
-        await notify.sendNotify(`${$.name}`, `${allMessage}`, { url: `https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean` })
+        console.log(`[京东账号${$.index} ${$.UserName}] 结束\n`)
+        if($.isNode()){
+            if($.index % $.sendNum === 0){
+                $.sentNum++;
+                console.log(`正在进行第 ${$.sentNum} 次发送通知，发送账号信息数量：${$.sendNum}`)
+                await notify.sendNotify(`${$.name}`, `${allMessage}`, { url: `https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean` })
+                $.msg(`${$.name}`, `${allMessage}`)
+                allMessage=""
+            } else if((cookiesArr.length - ($.sentNum * $.sendNum)) < $.sendNum){
+                console.log(`正在进行最后一次发送通知，发送账号信息数量：${(cookiesArr.length - ($.sentNum * $.sendNum))}`)
+                await notify.sendNotify(`${$.name}`, `${allMessage}`, { url: `https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean` })
+                $.msg(`${$.name}`, `${allMessage}`)
+                allMessage=""
+            }
+        }
     }
 })()
     .catch((e) => {
@@ -96,59 +116,67 @@ async function showMsg() {
     //   await notify.sendNotify(`${$.name} - 账号${$.index} - ${$.nickName}`, `账号${$.index}：${$.nickName || $.UserName}\n昨日收入：${$.incomeBean}京豆 🐶\n昨日支出：${$.expenseBean}京豆 🐶\n当前京豆：${$.beanCount}京豆 🐶${$.message}`, { url: `https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean` })
     // }
 
-    ReturnMessage=`📣=======账号${$.index}=======📣\n`
-    ReturnMessage+=`账号名称:${$.nickName || $.UserName}\n`;
-    ReturnMessage+=`今日收入:${$.todayIncomeBean}京豆 🐶\n`;
-    ReturnMessage+=`昨日收入:${$.incomeBean}京豆 🐶\n`;
-    ReturnMessage+=`昨日支出:${$.expenseBean}京豆 🐶\n`;
-    ReturnMessage+=`当前京豆:${$.beanCount}京豆(今日过期${$.expirejingdou})\n`;
+    ReturnMessage=`📣========账号${$.index}========📣\n`
+    ReturnMessage+=`👤账号名称:${$.nickName || $.UserName}\n`;
+    ReturnMessage+=`🥔今日收入:${$.todayIncomeBean}京豆\n`;
+    //ReturnMessage+=`🥔昨日收入:${$.incomeBean}京豆\n`;
+    //ReturnMessage+=`支出${$.expenseBean}\n`;
+    ReturnMessage+=`🥔当前京豆:${$.beanCount},今日过期${$.expirejingdou}\n`;
+    ReturnMessage+= `🧧总计红包:${$.balance},今日过期${$.expiredBalance}\n`
 
-    if(typeof $.JDEggcnt !== "undefined"){
-        ReturnMessage+=`京喜牧场:${$.JDEggcnt}枚鸡蛋\n`;
+    if (typeof $.TotalMoney !== "undefined") {
+      ReturnMessage += `💴签到现金:${$.TotalMoney}元\n`;
     }
-    if(typeof $.JDtotalcash !== "undefined"){
-        ReturnMessage+=`极速金币:${$.JDtotalcash}金币(≈${$.JDtotalcash / 10000}元)\n`;
-    }
-    if(typeof $.JdzzNum !== "undefined"){
-        ReturnMessage+=`京东赚赚:${$.JdzzNum}金币(≈${$.JdzzNum / 10000}元)\n`;
-    }
-    if($.JdMsScore!=0){
-        ReturnMessage+=`京东秒杀:${$.JdMsScore}秒秒币(≈${$.JdMsScore / 1000}元)\n`;
-    }
-    if($.JdFarmProdName != ""){
-        if($.JdtreeEnergy!=0){
-            ReturnMessage+=`东东农场:${$.JdFarmProdName},进度${(($.JdtreeEnergy / $.JdtreeTotalEnergy) * 100).toFixed(2)}%`;
-            if($.JdwaterD!='Infinity' && $.JdwaterD!='-Infinity'){
-                ReturnMessage+=`,${$.JdwaterD === 1 ? '明天' : $.JdwaterD === 2 ? '后天' : $.JdwaterD + '天后'}可兑🍉\n`;
-            } else {
-                ReturnMessage+=`\n`;
-            }
+    if ($.JdFarmProdName != "") {
+      if ($.JdtreeEnergy != 0) {
+        ReturnMessage += `‍🌾东东农场:${$.JdFarmProdName},进度${(($.JdtreeEnergy / $.JdtreeTotalEnergy) * 100).toFixed(
+          2
+        )}%`;
+        if ($.JdwaterD != "Infinity" && $.JdwaterD != "-Infinity") {
+          ReturnMessage += `,${$.JdwaterD === 1 ? "明天" : $.JdwaterD === 2 ? "后天" : $.JdwaterD + "天后"}可兑\n`;
         } else {
-            ReturnMessage+=`东东农场:${$.JdFarmProdName}\n`;
+          ReturnMessage += `\n`;
         }
+      } else {
+        ReturnMessage += `‍🌾东东农场:${$.JdFarmProdName}\n`;
+      }
     }
     if ($.jxFactoryInfo) {
-        ReturnMessage += `京喜工厂:${$.jxFactoryInfo}🏭\n`
+      ReturnMessage += `‍🔧京喜工厂:${$.jxFactoryInfo}\n`;
     }
-    /*if ($.ddFactoryInfo) {
-        ReturnMessage += `东东工厂:${$.ddFactoryInfo}🏭\n`
-    }*/
+    if ($.ddFactoryInfo) {
+      ReturnMessage += `🏭东东工厂:${$.ddFactoryInfo}\n`;
+    }
 
-    const response = await await PetRequest('energyCollect');
+    const response = await PetRequest('energyCollect');
     const initPetTownRes = await PetRequest('initPetTown');
     if (initPetTownRes.code === '0' && initPetTownRes.resultCode === '0' && initPetTownRes.message === 'success') {
         $.petInfo = initPetTownRes.result;
         if (response.resultCode === '0') {
-            ReturnMessage += `东东萌宠:${$.petInfo.goodsInfo.goodsName},`;
+            ReturnMessage += `🐶东东萌宠:${$.petInfo.goodsInfo.goodsName},`;
             ReturnMessage += `勋章${response.result.medalNum}/${response.result.medalNum+response.result.needCollectMedalNum}块(${response.result.medalPercent}%)\n`;
             //ReturnMessage += `          已有${response.result.medalNum}块勋章，还需${response.result.needCollectMedalNum}块\n`;
 
         }
     }
-    ReturnMessage+=`🧧🧧🧧🧧红包明细🧧🧧🧧🧧`;
-    ReturnMessage+=`${$.message}\n\n`;
+
+    if(typeof $.JDEggcnt !== "undefined"){
+        ReturnMessage+=`🥚京喜牧场:${$.JDEggcnt}枚鸡蛋\n`;
+    }
+    if(typeof $.JDtotalcash !== "undefined"){
+        ReturnMessage+=`💰极速金币:${$.JDtotalcash / 10000}元\n`;
+    }
+    if(typeof $.JdzzNum !== "undefined"){
+        ReturnMessage+=`💰京东赚赚:${$.JdzzNum / 10000}元\n`;
+    }
+    if($.JdMsScore!=0){
+        ReturnMessage+=`💰京东秒杀:${$.JdMsScore / 1000}元\n`;
+    }
+
+    ReturnMessage+=`📣====== 红包明细 ======📣`;
+    ReturnMessage+=`${$.message}\n📣=======END ${$.index}=======📣\n\n`;
     allMessage+=ReturnMessage;
-    $.msg($.name, '', ReturnMessage , {"open-url": "https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean"});
+    // $.msg($.name, '', ReturnMessage , {"open-url": "https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean"});
 }
 async function bean() {
     // console.log(`北京时间零点时间戳:${parseInt((Date.now() + 28800000) / 86400000) * 86400000 - 28800000}`);
@@ -393,7 +421,8 @@ function redPacket() {
                         $.jdhRed = $.jdhRed.toFixed(2)
                         $.balance = data.balance
                         $.expiredBalance = ($.jxRedExpire + $.jsRedExpire + $.jdRedExpire).toFixed(2)
-                        $.message += `\n当前红包:${$.balance}(今日过期${$.expiredBalance})元 \n京喜红包:${$.jxRed}(今日过期${$.jxRedExpire.toFixed(2)})元 \n极速红包:${$.jsRed}(今日过期${$.jsRedExpire.toFixed(2)})元 \n京东红包:${$.jdRed}(今日过期${$.jdRedExpire.toFixed(2)})元 \n健康红包:${$.jdhRed}(今日过期${$.jdhRedExpire.toFixed(2)})元 `;
+                        // $.message += `\n🧧总计红包：${$.balance}(今日总过期${$.expiredBalance})元`
+                        $.message += `\n🧧京喜红包:${$.jxRed},今日过期${$.jxRedExpire.toFixed(2)}\n🧧极速红包:${$.jsRed},今日过期${$.jsRedExpire.toFixed(2)}\n🧧京东红包:${$.jdRed},今日过期${$.jdRedExpire.toFixed(2)}\n🧧健康红包:${$.jdhRed},今日过期${$.jdhRedExpire.toFixed(2)}`;
                     } else {
                         console.log(`京东服务器返回空数据`)
                     }
@@ -627,6 +656,39 @@ function safeGet(data) {
     }
 }
 
+//领现金
+function TotalMoney() {
+    return new Promise(resolve => {
+        $.get({
+            url: 'https://api.m.jd.com/client.action?functionId=cash_exchangePage&body=%7B%7D&build=167398&client=apple&clientVersion=9.1.9&openudid=1fce88cd05c42fe2b054e846f11bdf33f016d676&sign=762a8e894dea8cbfd91cce4dd5714bc5&st=1602179446935&sv=102',
+            headers: {
+                Cookie: cookie,
+            }
+        }, async (err, resp, data) => {
+            try {
+                if (err) {
+                    console.log(`${JSON.stringify(err)}`)
+                    console.log(`${$.name} API请求失败，请检查网路重试`)
+                } else {
+                    if (safeGet(data)) {
+                        data = JSON.parse(data);
+                        if (data.code == 0 && data.data.bizCode == 0 && data.data.result) {
+                            $.TotalMoney = data.data.result.totalMoney || 0
+                            console.log(`京东-总现金查询成功${$.TotalMoney}元\n`)
+                        } else {
+                            console.log(`京东-总现金查询失败 ${data}\n`)
+                        }
+                    }
+                }
+            } catch (e) {
+                $.logErr(e, resp)
+            } finally {
+                resolve(data);
+            }
+        })
+    })
+}
+
 function cash() {
     return new Promise(resolve => {
         $.get(taskcashUrl('MyAssetsService.execute',
@@ -750,11 +812,11 @@ function getJxFactory() {
                                     infoMsg = `${$.jxProductName} ,进度:${((production.investedElectric / production.needElectric) * 100).toFixed(2)}%`;
                                     if (production.investedElectric >= production.needElectric) {
                                         if (production['exchangeStatus'] === 1) {
-                                            infoMsg = `${$.productName} ,已经可兑换，请手动兑换`;
+                                            infoMsg = `${$.jxProductName} ,已经可兑换，请手动兑换`;
                                         }
                                         if (production['exchangeStatus'] === 3) {
                                             if (new Date().getHours() === 9) {
-                                                infoMsg = `${$.productName} ,兑换已超时，请选择新商品进行制造`;
+                                                infoMsg = `${$.jxProductName} ,兑换已超时，请选择新商品进行制造`;
                                             }
                                         }
                                         // await exchangeProNotify()
@@ -762,7 +824,7 @@ function getJxFactory() {
                                         infoMsg += ` ,预计:${((production.needElectric - production.investedElectric) / (2 * 60 * 60 * 24)).toFixed(2)}天可兑换`
                                     }
                                     if (production.status === 3) {
-                                        infoMsg = "${$.productName} ,已经超时失效, 请选择新商品进行制造"
+                                        infoMsg = "${$.jxProductName} ,已经超时失效, 请选择新商品进行制造"
                                     }
                                 } else {
                                     $.unActive = false;//标记是否开启了京喜活动或者选购了商品进行生产
@@ -941,7 +1003,6 @@ function getGetRequest(type, url) {
     };
     return {url: url, method: method, headers: headers};
 }
-
 
 Date.prototype.Format = function (fmt) {
     var e,
